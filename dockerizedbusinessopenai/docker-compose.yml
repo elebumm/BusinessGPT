@@ -1,0 +1,55 @@
+version: "3"
+
+services:
+  web:
+    networks:
+      mynetwork:
+        ipv4_address: 192.168.1.100
+    build: .
+    ports:
+      - "9999:9999"
+    environment:
+      - FLASK_APP=app.py
+      - LUMINATI_PROXY=http://proxy:24000
+    depends_on:
+      - proxy
+    command: ["flask", "run", "--host=0.0.0.0", "--port=9999"]
+    env_file:
+      - .env
+    volumes:
+      - .:/app
+  frontend:
+    build: ./frontend
+    command: yarn run preview
+    depends_on:
+      - web
+    ports:
+      - "4173:4173"
+    volumes:
+      - ./frontend:/app/frontend
+
+  proxy:
+    networks:
+      - mynetwork
+    hostname: proxy
+    image: luminati/luminati-proxy
+    ports:
+      - 22999:22999
+      - 22225:22225
+      - 22555:22555
+      - 24000:24000
+    command: proxy-manager --config="/app/.luminati.json" --www_whitelist_ips "172.16.238.34" --www_whitelist_ips "192.168.1.100"
+    volumes:
+      - ./lewis_menelaws_config.json:/app/.luminati.json
+    healthcheck:
+      test: ["CMD", "curl", "-f", "proxy:22999"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
+
+networks:
+  mynetwork:
+    ipam:
+      config:
+        - subnet: 192.168.1.0/24
