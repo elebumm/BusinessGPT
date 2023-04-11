@@ -131,6 +131,7 @@ async def crawl(url):
             soup = BeautifulSoup(await response.text(), "html.parser")
             for link in soup.find_all("loc"):
                 link = link.text
+                link = link.replace(" ", "")
                 links.append(link)
 
     async with aiohttp.ClientSession() as session:
